@@ -1,8 +1,8 @@
 #!/bin/bash
 # Deploy new SSL certificate to remote servers for Let's Encrypt
 # certdeploy.sh
-# Version 1.3
-# AUG/15/2020
+# Version 1.4
+# AUG/20/2020
 # Victor Coss gtaxl@gtaxl.net
 
 IFS=';'
@@ -12,7 +12,7 @@ cat certdeploy.conf | grep $1 | while read cert ip port www; do
 		if [ $www = "yes" ]; then
 			touch /certdeploy/wwwcert
 		else
-			exit
+			exit 0
 		fi
 	else
 		chmod 640 /certdeploy/$1/*.pem
@@ -21,7 +21,7 @@ cat certdeploy.conf | grep $1 | while read cert ip port www; do
 		if [ $www = "yes" ]; then
 			ssh -p $port -i sshkey.id -q certdeploy@$ip "touch /certdeploy/wwwcert && exit"
 		else
-			exit
+			exit 0
 		fi
 	fi
 done
