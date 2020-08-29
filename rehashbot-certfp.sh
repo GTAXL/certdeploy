@@ -25,6 +25,7 @@ timeout 5s tail -f $input | openssl s_client -quiet -cert $certfp -key $certfp -
 	
 		*"You are now connected to GTAXLnet"*)
 			sleep 1
+			echo "OPER certdeploy" >> $input
 			echo "REHASH -ssl" >> $input
 		;;
 	
