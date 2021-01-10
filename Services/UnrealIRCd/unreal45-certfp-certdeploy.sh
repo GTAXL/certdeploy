@@ -33,9 +33,15 @@ timeout 5s tail -f $input | openssl s_client -quiet -cert $certfp -key $certfp -
 	
 		*"Welcome to the"*)
 			sleep 1
+			echo "MODE $nick +B" >> $input
 			echo "OPER certdeploy" >> $input
 			echo "REHASH -ssl" >> $input
 		;;
+		
+		*"VERSION"*)
+			res=${res%%!*} res=${res#:}; declare -p res
+			echo "NOTICE $res "$(echo -ne ":\001VERSION ") "certdeploy v2.5 https://github.com/GTAXL/certdeploy"$(echo -ne "\001") >> $input
+		;;	
 	
 		*"SSL rehash"*)
 			sleep 2

@@ -32,10 +32,16 @@ timeout 5s tail -f $input | openssl s_client -quiet -connect 127.0.0.1:6697 | wh
 		;;
 	
 		*"Welcome to the"*)
+			echo "MODE $nick +B" >> $input
 			echo "PRIVMSG NickServ :IDENTIFY $nickpassword" >> $input
 			echo "OPER certdeploy $operpassword" >> $input
 			echo "REHASH -ssl" >> $input
 		;;
+		
+		*"VERSION"*)
+			res=${res%%!*} res=${res#:}; declare -p res
+			echo "NOTICE $res "$(echo -ne ":\001VERSION ") "certdeploy v2.5 https://github.com/GTAXL/certdeploy"$(echo -ne "\001") >> $input
+		;;	
 	
 		*"SSL rehash"*)
 			sleep 2
