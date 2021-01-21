@@ -32,7 +32,7 @@ IP_VERSION=4
 #OLDCA="https://acme-v01.api.letsencrypt.org/directory"
 
 # Which challenge should be used? Currently http-01, dns-01 and tls-alpn-01 are supported
-#CHALLENGETYPE="http-01"
+CHALLENGETYPE="dns-01"
 
 # Path to a directory containing additional config files, allowing to override
 # the defaults found in the main configuration file. Additional config files
