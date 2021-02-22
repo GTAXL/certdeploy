@@ -1,230 +1,185 @@
 #!/usr/bin/env bash
+#Cloudflare DNS hook for certdeploy (dehydrated)
+#/home/certdeploy/hooks/cloudflare/hook.sh
+#Victor Coss gtaxl@gtaxl.net
+#Version 1.0 FEB/19/2021
 
-prefix="_acme-challenge."
+####################################################################################################
+############################# CONFIGURABLE OPTIONS #################################################
+####################################################################################################
+#More info here https://support.cloudflare.com/hc/en-us/articles/200167836-Managing-API-Tokens-and-Keys
+api_token="changeme"
+####################################################################################################
+############################# DON'T EDIT BELOW THIS LINE ###########################################
+####################################################################################################
 
-#if [[ ! -f "${PWD}/hooks/cfhookbash/config.sh" ]]; then
-#    if [[ -f "${PWD}/config.sh" ]]; then
-#        configFile="${PWD}/config.sh";
-#    fi
-#else
-#    configFile="${PWD}/hooks/cfhookbash/config.sh";
-#fi
+log() {
+	time=$(date --iso-8601=seconds)
+	echo "$time ${@:1}" 1>&2
+}
 
-# see https://stackoverflow.com/questions/59895/how-to-get-the-source-directory-of-a-bash-script-from-within-the-script-itself
-hookDirectory=$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )
-configFile="${hookDirectory}/config.sh"
+error() {
+	time=$(date --iso-8601=seconds)
+	echo -e "[0;31m$time ERROR: ${@:1}[0m" 1>&2
+	/home/certdeploy/smtp.sh remote_script $time ERROR: ${@:1}
+}
 
+#Credit @socram8888 https://github.com/socram8888
+scriptexitval=1
+trap "exit \$scriptexitval" SIGKILL
+abort() {
+	scriptexitval=$1
+	kill 0
+}
 
+#Rewrites subdomains and 2nd level TLDs such as co.uk etc to zone name
+#Credit @socram8888 https://github.com/socram8888
+rewrite_domain() {
+	local fqdn="$1"
+
+	awk -v fqdn="$fqdn" '
+		BEGIN {
+			best=""
+		}
+
+		{
+			# Remove comments
+			gsub(/\/\/.*/, "")
+
+			# Remove spaces
+			gsub(/[ \t]/, "")
+
+			# If blank, skip
+			if (length($0) == 0)
+				next
+
+			# Add leading dot
+			tld="." $0
+
+			# Check if this new TLD is longer and matches
+			if (length(tld) > length(best) && substr(fqdn, length(fqdn) - length(tld) + 1) == tld) {
+				best=tld
+			}
+		}
+
+		END {
+			# Remove TLD
+			domain=substr(fqdn, 1, length(fqdn) - length(best))
+
+			# Remove everything before the last dot - all subdomains, that is
+			gsub(/^.*\./, "", domain)
+
+			# Print appending TLD
+			print domain best
+		}
+	' /home/certdeploy/hooks/cloudflare/effective_tld_names.dat
+}
+
+fetch_zone_id() {
+	if [ -f "/home/certdeploy/hooks/cloudflare/zoneid_$1.txt" ]; then
+		log "Zone ID exists on file."
+		cat /home/certdeploy/hooks/cloudflare/zoneid_$1.txt
+	else
+		log "Zone ID is not on file, fetching from Cloudflare's API..."
+		local resp=$(curl -s -H "Authorization: Bearer ${api_token}" -H "Content-Type: application/json" "https://api.cloudflare.com/client/v4/zones?name=${1}")
+		local status=$(echo $resp | jq -r ".success")
+		local zoneid=$(echo $resp | jq -r ".result[0].id")
+		if [ $status == "true" ] && [ $zoneid != "null" ]; then
+			echo $zoneid > /home/certdeploy/hooks/cloudflare/zoneid_$1.txt
+			echo $zoneid
+		else
+			error "Fetching Zone ID failed! Check API Token or Domain. Zone: $1"
+			error "$resp"
+			abort 1
+		fi
+	fi
+}
+
+create_acme_txt() {
+	local resp=$(curl -s -H "Authorization: Bearer ${api_token}" -H "Content-Type: application/json" -X POST "https://api.cloudflare.com/client/v4/zones/${1}/dns_records" --data "{\"type\":\"TXT\",\"name\":\"_acme-challenge.${2}\",\"content\":\"${3}\",\"ttl\":\"120\"}")
+	local status=$(echo $resp | jq -r ".success")
+	local recordid=$(echo $resp | jq -r ".result.id")
+	if [ $status == "true" ] && [ $recordid != "null" ]; then
+		log "Successfully added the ACME Challenge. Record ID $recordid for $2"
+		echo $recordid > /home/certdeploy/hooks/cloudflare/recordid_$2.txt
+		log "Waiting 10 seconds for DNS to propagate..."
+		sleep 10;
+	else
+		error "Failed to create ACME Challenge TXT record for $2"
+		error "$resp"
+		abort 1
+	fi
+}
+
+delete_acme_txt() {
+	local resp=$(curl -s -H "Authorization: Bearer ${api_token}" -H "Content-Type: application/json" -X DELETE "https://api.cloudflare.com/client/v4/zones/${1}/dns_records/${2}")
+	local status=$(echo $resp | jq -r ".success")
+	if [ $status == "true" ]; then
+		log "Successfully deleted ACME TXT record, Record ID $2 for $3"
+		rm /home/certdeploy/hooks/cloudflare/recordid_$3.txt
+	else
+		error "Failed to delete ACME TXT record, Record ID $2 for $3"
+		error "$resp"
+		abort 1
+	fi
+}
 
 deploy_challenge() {
     local DOMAIN="${1}" TOKEN_FILENAME="${2}" TOKEN_VALUE="${3}"
-
-    . "${configFile}"
-    #if [[ -z "${ROOT_DIR}" ]];then
-    #    hookDirectory="${PWD}/hooks/cfhookbash";
-    #else
-    #    hookDirectory="${ROOT_DIR}";
-    #fi
-
-    curl -X POST "https://api.cloudflare.com/client/v4/zones/${zones}/dns_records"\
-        -H "X-Auth-Email: ${email}"\
-        -H "X-Auth-Key: ${global_api_key}"\
-        -H "Content-Type: application/json"\
-        --data '{"type":"TXT","name":"'${prefix}${1}'","content":"'${3}'","ttl":120,"priority":10,"proxied":false}'\
-        -o "${hookDirectory}/${1}.txt" | jq -r '{"result"}[] | .[0] | .id'
-
-    # Add delay to get the new DNS record
-    local DELAY=10;
-    echo "+++ Wait for ${DELAY} seconds. +++";
-    while [ $DELAY -gt 0 ]; do
-        sleep 1;
-       : $((DELAY--))
-    done
-
-
-    # This hook is called once for every domain that needs to be
-    # validated, including any alternative names you may have listed.
-    #
-    # Parameters:
-    # - DOMAIN
-    #   The domain name (CN or subject alternative name) being
-    #   validated.
-    # - TOKEN_FILENAME
-    #   The name of the file containing the token to be served for HTTP
-    #   validation. Should be served by your web server as
-    #   /.well-known/acme-challenge/${TOKEN_FILENAME}.
-    # - TOKEN_VALUE
-    #   The token value that needs to be served for validation. For DNS
-    #   validation, this is what you want to put in the _acme-challenge
-    #   TXT record. For HTTP validation it is the value that is expected
-    #   be found in the $TOKEN_FILENAME file.
-
-    # Simple example: Use nsupdate with local named
-    # printf 'server 127.0.0.1\nupdate add _acme-challenge.%s 300 IN TXT "%s"\nsend\n' "${DOMAIN}" "${TOKEN_VALUE}" | nsupdate -k /var/run/named/session.key
+	log "Deploying challenge token in DNS..."
+	local zone=$(rewrite_domain $DOMAIN)
+	log "Fetching Zone ID..."
+	local zoneid=$(fetch_zone_id $zone)
+	log "Zone ID for $zone is $zoneid"
+	log "Creating ACME Challenge TXT record..."
+	create_acme_txt $zoneid $DOMAIN $TOKEN_VALUE
 }
 
 clean_challenge() {
     local DOMAIN="${1}" TOKEN_FILENAME="${2}" TOKEN_VALUE="${3}"
-
-    . "${configFile}"
-
-    # key_value=$(grep -Po '"id":.*?[^\\]"' "${hookDirectory}/${1}.txt")
-    #cat "${hookDirectory}/${1}.txt"
-    #key_value=$(grep -oP '(?<="id": ")[^"]*' "${hookDirectory}/${1}.txt")
-    key_value=$(cat "${hookDirectory}/${1}.txt" | jq -r '.result.id')
-    #printf "id: %s\n" "${key_value}"
-    #Remove first 6 occurence
-    #id="${key_value:6}"
-    #printf "id: %s\n" "${id}"
-    #Remove last char
-    #id="${id::-1}"
-    id="${key_value}"
-    printf "id: %s\n" "${id}"
-
-
-    curl -X DELETE "https://api.cloudflare.com/client/v4/zones/$zones/dns_records/${id}" \
-     -H "X-Auth-Email: ${email}"\
-     -H "X-Auth-Key: ${global_api_key}"\
-     -H "Content-Type: application/json"
-
-    rm "${hookDirectory}/${1}.txt"
-
-    # This hook is called after attempting to validate each domain,
-    # whether or not validation was successful. Here you can delete
-    # files or DNS records that are no longer needed.
-    #
-    # The parameters are the same as for deploy_challenge.
-
-    # Simple example: Use nsupdate with local named
-    # printf 'server 127.0.0.1\nupdate delete _acme-challenge.%s TXT "%s"\nsend\n' "${DOMAIN}" "${TOKEN_VALUE}" | nsupdate -k /var/run/named/session.key
+	log "Cleaning up challenge token..."
+	local zone=$(rewrite_domain $DOMAIN)
+	if [ -f "/home/certdeploy/hooks/cloudflare/recordid_$DOMAIN.txt" ]; then
+		local recordid=$(cat /home/certdeploy/hooks/cloudflare/recordid_$DOMAIN.txt)
+		log "Fetching Zone ID..."
+		local zoneid=$(fetch_zone_id $zone)
+		delete_acme_txt $zoneid $recordid $DOMAIN
+	else
+		error "Record ID doesn't exist on file for $DOMAIN"
+		abort 1
+	fi
 }
 
 deploy_cert() {
     local DOMAIN="${1}" KEYFILE="${2}" CERTFILE="${3}" FULLCHAINFILE="${4}" CHAINFILE="${5}" TIMESTAMP="${6}"
+	log "Deploying certificate. Running certdeploy.sh"
 	/home/certdeploy/certdeploy.sh $DOMAIN
-}
-
-deploy_ocsp() {
-    local DOMAIN="${1}" OCSPFILE="${2}" TIMESTAMP="${3}"
-
-    # This hook is called once for each updated ocsp stapling file that has
-    # been produced. Here you might, for instance, copy your new ocsp stapling
-    # files to service-specific locations and reload the service.
-    #
-    # Parameters:
-    # - DOMAIN
-    #   The primary domain name, i.e. the certificate common
-    #   name (CN).
-    # - OCSPFILE
-    #   The path of the ocsp stapling file
-    # - TIMESTAMP
-    #   Timestamp when the specified ocsp stapling file was created.
-
-    # Simple example: Copy file to nginx config
-    # cp "${OCSPFILE}" /etc/nginx/ssl/; chown -R nginx: /etc/nginx/ssl
-    # systemctl reload nginx
-}
-
-
-unchanged_cert() {
-    local DOMAIN="${1}" KEYFILE="${2}" CERTFILE="${3}" FULLCHAINFILE="${4}" CHAINFILE="${5}"
-
-    # This hook is called once for each certificate that is still
-    # valid and therefore wasn't reissued.
-    #
-    # Parameters:
-    # - DOMAIN
-    #   The primary domain name, i.e. the certificate common
-    #   name (CN).
-    # - KEYFILE
-    #   The path of the file containing the private key.
-    # - CERTFILE
-    #   The path of the file containing the signed certificate.
-    # - FULLCHAINFILE
-    #   The path of the file containing the full certificate chain.
-    # - CHAINFILE
-    #   The path of the file containing the intermediate certificate(s).
 }
 
 invalid_challenge() {
     local DOMAIN="${1}" RESPONSE="${2}"
-
-    # This hook is called if the challenge response has failed, so domain
-    # owners can be aware and act accordingly.ls
-    #
-    # Parameters:
-    # - DOMAIN
-    #   The primary domain name, i.e. the certificate common
-    #   name (CN).
-    # - RESPONSE
-    #   The response that the verification server returned
-
-    # Simple example: Send mail to root
-    # printf "Subject: Validation of ${DOMAIN} failed!\n\nOh noez!" | sendmail root
+	error "Validation of ${DOMAIN} failed. Response: ${RESPONSE}"
 }
 
 request_failure() {
     local STATUSCODE="${1}" REASON="${2}" REQTYPE="${3}" HEADERS="${4}"
-
-    # This hook is called when an HTTP request fails (e.g., when the ACME
-    # server is busy, returns an error, etc). It will be called upon any
-    # response code that does not start with '2'. Useful to alert admins
-    # about problems with requests.
-    #
-    # Parameters:
-    # - STATUSCODE
-    #   The HTML status code that originated the error.
-    # - REASON
-    #   The specified reason for the error.
-    # - REQTYPE
-    #   The kind of request that was made (GET, POST...)
-    # - HEADERS
-    #   HTTP headers returned by the CA
-
-    # Simple example: Send mail to root
-    # printf "Subject: HTTP request failed failed!\n\nA http request failed with status ${STATUSCODE}!" | sendmail root
-}
-
-generate_csr() {
-    local DOMAIN="${1}" CERTDIR="${2}" ALTNAMES="${3}"
-
-    # This hook is called before any certificate signing operation takes place.
-    # It can be used to generate or fetch a certificate signing request with external
-    # tools.
-    # The output should be just the cerificate signing request formatted as PEM.
-    #
-    # Parameters:
-    # - DOMAIN
-    #   The primary domain as specified in domains.txt. This does not need to
-    #   match with the domains in the CSR, it's basically just the directory name.
-    # - CERTDIR
-    #   Certificate output directory for this particular certificate. Can be used
-    #   for storing additional files.
-    # - ALTNAMES
-    #   All domain names for the current certificate as specified in domains.txt.
-    #   Again, this doesn't need to match with the CSR, it's just there for convenience.
-
-    # Simple example: Look for pre-generated CSRs
-    # if [ -e "${CERTDIR}/pre-generated.csr" ]; then
-    #   cat "${CERTDIR}/pre-generated.csr"
-    # fi
+	error "HTTP request failed. Status Code: ${STATUSCODE} Reason: ${REASON} Request Type: ${REQTYPE} Headers: ${HEADERS}"
 }
 
 startup_hook() {
-  # This hook is called before the cron command to do some initial tasks
-  # (e.g. starting a webserver).
-
-  :
+	log "Begin logging from Cloudflare hook."
 }
 
 exit_hook() {
-  # This hook is called at the end of the cron command and can be used to
-  # do some final (cleanup or other) tasks.
-
-  :
+	local ERROR="${1:-}"
+	if [ -z "$ERROR" ]; then
+		log "End logging from Cloudflare hook."
+	else
+		error "$ERROR"
+	fi
 }
 
 HANDLER="$1"; shift
-if [[ "${HANDLER}" =~ ^(deploy_challenge|clean_challenge|deploy_cert|deploy_ocsp|unchanged_cert|invalid_challenge|request_failure|generate_csr|startup_hook|exit_hook)$ ]]; then
+if [[ "${HANDLER}" =~ ^(deploy_challenge|clean_challenge|deploy_cert|invalid_challenge|request_failure|startup_hook|exit_hook)$ ]]; then
   "$HANDLER" "$@"
 fi
