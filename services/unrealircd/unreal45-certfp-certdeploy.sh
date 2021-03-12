@@ -3,7 +3,7 @@
 # Utilizes certificate fingerprint for authentication, certfp
 # unreal45-certfp-certdeploy.sh
 # Victor Coss gtaxl@gtaxl.net
-# Version 2.5 JAN/06/2021
+# Version 2.6 MAR/11/2021
 # Example cronjob:
 # 0 * * * * /home/gtaxl/certdeploy/unreal45-certfp-certdeploy.sh
 ####################################################################################################
@@ -18,6 +18,8 @@ unrealdir=/home/gtaxl/unrealircd
 ####################################################################################################
 ############################# DON'T EDIT BELOW THIS LINE ###########################################
 ####################################################################################################
+cd $scriptdir
+
 rehashbot() {
 input=".bot.cfg"
 
