@@ -2,7 +2,7 @@
 #Cloudflare DNS hook for certdeploy (dehydrated)
 #/home/certdeploy/hooks/cloudflare/hook.sh
 #Victor Coss gtaxl@gtaxl.net
-#Version 1.0 FEB/19/2021
+#Version 1.1 NOV/12/2022
 
 ####################################################################################################
 ############################# CONFIGURABLE OPTIONS #################################################
@@ -102,8 +102,8 @@ create_acme_txt() {
 	if [ $status == "true" ] && [ $recordid != "null" ]; then
 		log "Successfully added the ACME Challenge. Record ID $recordid for $2"
 		echo $recordid > /home/certdeploy/hooks/cloudflare/recordid_$2.txt
-		log "Waiting 10 seconds for DNS to propagate..."
-		sleep 10;
+		log "Waiting 30 seconds for DNS to propagate..."
+		sleep 30;
 	else
 		error "Failed to create ACME Challenge TXT record for $2"
 		error "$resp"
