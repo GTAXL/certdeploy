@@ -2,7 +2,7 @@
 #Cloudflare DNS hook for certdeploy (dehydrated)
 #/home/certdeploy/hooks/cloudflare/hook.sh
 #Victor Coss gtaxl@gtaxl.net
-#Version 1.1 NOV/12/2022
+#Version 1.2 JUN/15/2024
 
 ####################################################################################################
 ############################# CONFIGURABLE OPTIONS #################################################
@@ -96,7 +96,7 @@ fetch_zone_id() {
 }
 
 create_acme_txt() {
-	local resp=$(curl -s -H "Authorization: Bearer ${api_token}" -H "Content-Type: application/json" -X POST "https://api.cloudflare.com/client/v4/zones/${1}/dns_records" --data "{\"type\":\"TXT\",\"name\":\"_acme-challenge.${2}\",\"content\":\"${3}\",\"ttl\":\"120\"}")
+	local resp=$(curl -s -H "Authorization: Bearer ${api_token}" -H "Content-Type: application/json" -X POST "https://api.cloudflare.com/client/v4/zones/${1}/dns_records" --data "{\"type\":\"TXT\",\"name\":\"_acme-challenge.${2}\",\"content\":\"${3}\",\"ttl\":120}")
 	local status=$(echo $resp | jq -r ".success")
 	local recordid=$(echo $resp | jq -r ".result.id")
 	if [ $status == "true" ] && [ $recordid != "null" ]; then
