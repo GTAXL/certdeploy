@@ -1,4 +1,0 @@
-example.com server01.example.com
-www.anotherdomain.net anotherdomain.net cdn.anotherdomain.net
-thisserver.com
-websitehere.thisserver.com cdn.thisserver.com www.thisserver.com
