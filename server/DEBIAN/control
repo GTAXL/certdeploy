@@ -1,0 +1,17 @@
+Package: certdeploy_server
+Version: 2025.05.14
+Architecture: all
+Maintainer: Victor Coss <victor@openbackdoor.com>
+Depends: dehydrated, curl, publicsuffix, yq, jq
+Conflicts: certbot, certdeploy_client
+Provides: ssl-cert-management, acme-client, tls-certificate-deployment
+Priority: optional
+Section: security
+Homepage: https://github.com/GTAXL/certdeploy
+Description: Automated TLS certificate issuance and deployment tool.
+ This package provides seamless management of TLS certificates, leveraging
+ legitimate Certificate Authorities via the ACME protocol. Compatible with
+ providers such as Let's Encrypt, it simplifies certificate issuance, renewal,
+ and deployment to both local and remote servers based on user-defined 
+ configuration. Designed for flexibility, it supports various services 
+ including web servers, e-mail servers, IRC networks, routers, and more.

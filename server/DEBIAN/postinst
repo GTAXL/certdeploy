@@ -1,0 +1,13 @@
+#!/bin/sh
+
+set -e
+
+install -d -m 775 -o certdeploy -g certdeploy /certdeploy
+
+touch /certdeploy/wwwcert
+chown certdeploy:certdeploy /certdeploy/wwwcert
+chmod 644 /certdeploy/wwwcert
+
+touch /var/log/certdeploy.log
+chown certdeploy:certdeploy /var/log/certdeploy.log
+chmod 760 /var/log/certdeploy.log
