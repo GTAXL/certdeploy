@@ -1,0 +1,37 @@
+certdeploy:
+  default_dns: cloudflare
+
+  dns:
+    cloudflare:
+      api_token: "changeme"
+
+  remote_server:
+    zinc:
+      ip: 240.58.77.125
+      port: 3875
+    arsenic:
+      ip: 172.22.87.5
+      port: 34976
+    carbon:
+      ip: 192.88.99.66
+
+  domains:
+    - cn: www.example.com
+      san: "example.com"
+      remote:
+        server: zinc
+    - cn: www.altostrat.com
+      san: "altostrat.com"
+      remote:
+        server: carbon
+    - cn: www.cymbalgroup.com
+      san: "cymbalgroup.com store.cymbalgroup.com downloads.cymbalgroup.com"
+      key_type: secp384r1
+      ca: zerossl
+    - cn: www.example.org
+      san: example.org
+      remote:
+        server: zinc
+    - cn: router01.example.org
+      web: no
+      watcher: pfsense
