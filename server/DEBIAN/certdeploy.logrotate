@@ -1,0 +1,12 @@
+/var/log/certdeploy.log {
+    daily
+    rotate 7
+    compress
+    delaycompress
+    missingok
+    notifempty
+    create 760 certdeploy certdeploy
+    postrotate
+        systemctl restart certdeploy.service || true
+    endscript
+}
