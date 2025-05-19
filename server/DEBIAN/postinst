@@ -1,13 +1,36 @@
-#!/bin/sh
+#!/usr/bin/env bash
+# Post installation script after Debian package install.
+# (C) 2020-2025 Victor Coss <victor@openbackdoor.com>
+# Version: 2025.05.18
 
 set -e
 
+# Create proper directories and files needed for certdeploy
+
 install -d -m 775 -o certdeploy -g certdeploy /certdeploy
+install -m 644 -o certdeploy -g certdeploy /dev/null /certdeploy/wwwcert
+install -m 760 -o certdeploy -g certdeploy /dev/null /var/log/certdeploy.log
 
-touch /certdeploy/wwwcert
-chown certdeploy:certdeploy /certdeploy/wwwcert
-chmod 644 /certdeploy/wwwcert
+# Apply Patches external to quilt
 
-touch /var/log/certdeploy.log
-chown certdeploy:certdeploy /var/log/certdeploy.log
-chmod 760 /var/log/certdeploy.log
+## Fix DNS hook being required on CA registration and TOS listing
+
+PATCH_FILE="/usr/local/share/certdeploy/patches/fix-dns-hook-validation.patch"
+TARGET_FILE="/usr/bin/dehydrated"
+REQUIRED_VERSION="0.7.3"
+
+DEHYDRATED_VERSION=$(apt-cache policy dehydrated | awk '/Installed:/ {print $2}')
+
+# Apply patch only if version is less than 0.7.3
+if dpkg --compare-versions "${DEHYDRATED_VERSION}" lt "${REQUIRED_VERSION}"; then
+    if [[ -f "${PATCH_FILE}" && -f "${TARGET_FILE}" ]]; then
+        echo "Applying patch for dehydrated version ${DEHYDRATED_VERSION}..."
+        patch "${TARGET_FILE}" < "${PATCH_FILE}"
+        echo "Patch applied successfully!"
+    else
+        echo "Error: Patch file or target file missing."
+        exit 1
+    fi
+else
+    echo "Installed dehydrated version (${DEHYDRATED_VERSION}) is >= ${REQUIRED_VERSION}. No patch needed."
+fi
