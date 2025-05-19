@@ -1,8 +1,8 @@
 Package: certdeploy_server
-Version: 2025.05.14
+Version: 2025.05.18
 Architecture: all
 Maintainer: Victor Coss <victor@openbackdoor.com>
-Depends: dehydrated, curl, publicsuffix, yq, jq
+Depends: dehydrated, curl, publicsuffix, yq, jq, sudo
 Conflicts: certbot, certdeploy_client
 Provides: ssl-cert-management, acme-client, tls-certificate-deployment
 Priority: optional
