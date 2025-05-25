@@ -1,13 +1,18 @@
 #!/usr/bin/env bash
 # Post installation script after Debian package install.
 # (C) 2020-2025 Victor Coss <victor@openbackdoor.com>
-# Version: 2025.05.18
+# Version: 2025.05.25
 
 set -e
 
 # Create proper directories and files needed for certdeploy
 
 install -d -m 775 -o certdeploy -g certdeploy /certdeploy
+install -d -m 2770 -o certdeploy -g certdeploy \
+    /var/lib/certdeploy \
+    /var/lib/certdeploy/dns-hooks \
+    /var/lib/certdeploy/watchers \
+    /var/lib/certdeploy/dns-hooks/cloudflare
 install -m 644 -o certdeploy -g certdeploy /dev/null /certdeploy/wwwcert
 install -m 760 -o certdeploy -g certdeploy /dev/null /var/log/certdeploy.log
 
