@@ -1,6 +1,6 @@
 ﻿# Google Trust Services [recommended]
 
-Google runs a Certificate Authority offering 90 day TLS certificates for free using ACME. Their root certificate is cross-signed with GlobalSign enabling excellent device compatibility. The certificate chain is the same as google.com and youtube.com We recommend this CA over others for the best device compatibility and reliability.
+Google runs a Certificate Authority offering 90 day TLS certificates for free using ACME. Their root certificate is cross-signed with GlobalSign enabling world-class device compatibility. The certificate chain is the same as google.com and youtube.com We recommend this CA over others for the best device compatibility and reliability.
 
 
 ![Logo](https://status.pki.goog/images/trust-logo.svg)
@@ -10,11 +10,15 @@ Google runs a Certificate Authority offering 90 day TLS certificates for free us
 To use the GTS (Google Trust Services) ACME server with certdeploy you will first need to gather your EAB (External Account Binding) information. You will need to have a Google account and access to Google Cloud. The PKI ACME service is tied into Google Cloud. The ACME service is completely free to use and setup. You will need to un-fortunately install a Google Cloud program to run some commands to generate your EAB credentials to use the ACME server. Once you do this, you should never have to interact with this program or Google Cloud again.
 ### Download the Google Cloud CLI program
 This program gives you command line access to your Google Cloud account to provision and configure various services. It is available for Windows, macOS, Debian, Ubuntu, Red Hat, Fedora, etc.
+
 **Link to gcloud CLI program:** [Click Here](https://obdr.it/OeBZj)
+
 Direct Link for Windows: [Click Here](https://obdr.it/m3MJY) *Might be dead later, try the above link or poke me to update it.*
 ### Install the Google Cloud CLI program
 In this example we are using Windows.
+
 ![Installation of Google Cloud CLI on Windows 10](https://pik.gtaxl.net/2025_05_25_155405.png)
+
 Make sure to check the "**Run 'gcloud init' to configure the Google Cloud CLI**" option
 ![Check mark options to complete the Google Cloud CLI setup on Windows 10](https://pik.gtaxl.net/2025_05_25_155552.png)
 ### Sign in and configure the Google Cloud CLI program
@@ -23,7 +27,9 @@ Sign into your Google account (same as Gmail). **You will get a command line pro
 ### Create a new Google Cloud Project strictly for use with certdeploy
 For "Pick cloud project to use" type the number that corresponds with "**Create a new project**".
 ![Create a new project](https://pik.gtaxl.net/2025_05_25_160439.png)
-Create a new project ID, this is just a name of your new Google Cloud "project". You can name it anything but we recommend just putting certdeploy so you will know later if you ever go into your Google Cloud account. Type certdeploy and hit enter. In my particular example I used obd-pki instead.
+
+Create a new project ID. This is just a name of your new Google Cloud "project". You can name it anything but we recommend just putting certdeploy so you will know later if you ever go into your Google Cloud account. Type certdeploy and hit enter. In my particular example I used obd-pki instead.
+
 ![Enter a Project ID](https://pik.gtaxl.net/2025_05_25_163308.png)
 ### Enable ACME service for your Google Cloud Project
 Enable the Public CA API for your newly created project.
@@ -41,11 +47,12 @@ When setting up certdeploy for the first time or debugging issues, you probably 
 
 **Note:** It appears from the documentation that you can't currently use both Staging and Production ACME endpoints at the same time. You can only have one enable to your Google Cloud project at any given time.
 
-<span style="color:red"> **WARNING! Using the Staging server instead of Production will result in Invalid Certificate errors in your end-user's browsers and or application. This is meant for testing your configuration, then once you are satisfied everything is being installed and deployed correctly you switch back to Production immediately. If you followed the aforementioned instructions on this documentation, you have already enabled Production and don't have to continue with this section unless you want to use Staging.** </span>
+> [!WARNING]
+> Using the Staging server instead of Production will result in Invalid Certificate errors in your end-user's browsers and or application. This is meant for testing your configuration, then once you are satisfied everything is being installed and deployed correctly you switch back to Production immediately. If you followed the aforementioned instructions on this documentation, you have already enabled Production and don't have to continue with this section unless you want to use Staging.** </span>
 ### Switch your project to use the Staging ACME server
 
     gcloud config set api_endpoint_overrides/publicca https://preprod-publicca.googleapis.com/
-d
+
 ### Retrieve your External Account Binding
 
     gcloud publicca external-account-keys create
@@ -55,7 +62,7 @@ You should now have what you need to register the GTS Certificate Authority with
 ### Register Production Server (you probably want this)
 
     certdeploy register google --email your@gmail.com --eab-kid secret_key_here --eab-hmac-key another_secret_here
- Replace your@gmail.com with your e-mail address. Replace **--eab-kid with the keyId** you got earlier, and **--eab-hmac-key with the b64MacKey**.
+ Replace your&#64;gmail.com with your e-mail address. Replace **--eab-kid with the keyId** you got earlier, and **--eab-hmac-key with the b64MacKey**.
 ### Register Staging Server (Testing)
 This is optional as stated above. If you plan on using it first to test things out, don't do the production server instructions. Remember, you can only use one at any given time.
 
@@ -84,9 +91,13 @@ If you are currently using Staging and want to go back to Production, open up th
 Note: You may have to create a new EAB credentials. If you haven't previously, register certdeploy to the production server. Update your /etc/certdeploy.yml configuration file from google-test to google for the default_ca and or ca: entries.
 ## Additional Information
 [Public CA Overview](https://obdr.it/eg19W)
+
 [Request a certificate using Public CA and an ACME client](https://obdr.it/s3PAm)
+
 [Quotas, rates and limits](https://obdr.it/7aqy9)
+
 [Google Trust Services Homepage](https://obdr.it/teFw3)
+
 [GTS Status](https://obdr.it/peWKc)
 ## Certificate Chain
 Google Trust Services is cross-signed with a GlobalSign root certificate from 1998, ensuring maximum device compatibility.
@@ -98,3 +109,6 @@ Google Trust Services is cross-signed with a GlobalSign root certificate from 19
 | GTS Root R1        |     Y    | RSA 4096 | SHA256withRSA | 2020-06-19 - 2028-01-28 | 3ee0278df71fa3c125c4cd487f01d774694e6fc57e0cd94c24efd769133918e5 |
 | GlobalSign Root CA |     N    | RSA 2048 | SHA1withRSA   | 1998-09-01 - 2028-01-28 | ebd41040e4bb3ec742c9e381d31ef2a41a48b6685c96e7cef3c1df6cd4331c99 |
 
+## CAA Record
+If you are using CAA records to lock down what Certificate Authorities are authorized for your domain, you will need to add Google Trust Services. They use the following CAA record:
+```pki.goog; cansignhttpexchanges=yes```
