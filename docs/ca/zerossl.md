@@ -1,5 +1,8 @@
 ﻿# ZeroSSL [not recommended]
 ZeroSSL is a Certificate Authority from Austria offering 90 day TLS certificates for free using ACME. They were recently acquired in 2024 by HID Global from the United States. It appears they are still running ZeroSSL operations from Austria however. They were founded in 2016. Their root certificate is cross-signed with Sectigo enabling world-class device compatibility.
+
+![Logo](https://theme.zdassets.com/theme_assets/1003320/fab38ea8a902d3b91374a6767da30d1b17ebe016.jpeg)
+
 ## CA Details
 
  - **Country:** Austria, parent company United States
@@ -26,17 +29,21 @@ If you want ZeroSSL to be your default CA for all certificates, update the **def
 ### /etc/certdeploy.yml
 Set ZeroSSL as your default Certificate Authority for all certs. Please note, if you wish to use a different CA such as Let's Encrypt for a particular certificate, you can by adding the ca: configuration option to the domain in question, ex. ca: letsencrypt.
 
-    certdeploy:
-      default_ca: zerossl
+```yaml
+certdeploy:
+  default_ca: zerossl
+```
   Use for a specific certificate only, if your default is another CA provider.
   
+```yaml
+certdeploy:
+  default_ca: letsencrypt
 
-    certdeploy:
-      default_ca: letsencrypt
-      domains:
-        - cn: www.example.com
-          san: "example.com"
-          ca: zerossl
+  domains:
+    - cn: www.example.com
+      san: "example.com"
+      ca: zerossl
+```
   ## Additional Information
   [Generate ACME EAB Credentials via API](https://obdr.it/EzPrD)
   [ACME Documentation](https://obdr.it/Zd0WR)
