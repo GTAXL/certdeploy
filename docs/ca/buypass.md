@@ -17,6 +17,8 @@ Buypass requires you to provide an e-mail address to register an ACME account. T
  
 
     certdeploy register buypass-test --email example@openbackdoor.com
+> [!TIP]
+> Buypass Production and Staging are automatically registered when you use the `certdeploy register all --email example@openbackdoor.com` command.
 ## Configuration to use Buypass AS
 If you want Buypass AS to be your default CA for all certificates, update the **default_ca** entry in your **/etc/certdeploy.yml configuration file**.
 
@@ -37,6 +39,8 @@ Set Buypass as your default Certificate Authority for all certs. Please note, if
           ca: buypass
 ## Staging (Testing ACME Server)
 When setting up certdeploy for the first time or debugging issues, you probably want to use the Staging server first. This is an alternative ACME server offered by Buypass for use with testing without worrying about hitting rate limits. The certificate chain offered on Staging is not publicly trusted and is a mock-up simply for testing your configuration and deployment systems.
+> [!WARNING]
+> Using the Staging server instead of Production will result in Invalid Certificate errors in your end-user's browsers and or application. This is meant for testing your configuration, then once you are satisfied everything is being installed and deployed correctly you switch back to Production immediately. If you followed the aforementioned instructions on this documentation, you have already enabled Production and don't have to continue with this section unless you want to use Staging.
 ## Additional Information
 [GO SSL ACME Rate Limits](https://obdr.it/07pUV)
 ## Certificate Chain
