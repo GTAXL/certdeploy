@@ -109,3 +109,6 @@ Google Trust Services is cross-signed with a GlobalSign root certificate from 19
 | GTS Root R1        |     Y    | RSA 4096 | SHA256withRSA | 2020-06-19 - 2028-01-28 | 3ee0278df71fa3c125c4cd487f01d774694e6fc57e0cd94c24efd769133918e5 |
 | GlobalSign Root CA |     N    | RSA 2048 | SHA1withRSA   | 1998-09-01 - 2028-01-28 | ebd41040e4bb3ec742c9e381d31ef2a41a48b6685c96e7cef3c1df6cd4331c99 |
 
+## CAA Record
+If you are using CAA records to lock down what Certificate Authorities are authorized for your domain, you will need to add Google Trust Services. They use the following CAA record:
+```pki.goog; cansignhttpexchanges=yes```
