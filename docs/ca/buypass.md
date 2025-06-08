@@ -1,5 +1,6 @@
 ﻿# Buypass AS
 Buypass is a CA from Norway offering 180 day TLS certificates for free using ACME. They have been in business since 2001.
+![Logo](https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/Buypass_logo.svg/1024px-Buypass_logo.svg.png)
 ## CA Details
 
  - **Country:** Norway
@@ -25,18 +26,20 @@ If you want Buypass AS to be your default CA for all certificates, update the **
 **Production is buypass, Staging is buypass-test.**
 ### /etc/certdeploy.yml
 Set Buypass as your default Certificate Authority for all certs. Please note, if you wish to use a different CA such as Let's Encrypt for a particular certificate, you can do so by adding the ca: configuration option to the domain in question, ex. ca: letsencrypt.
-
-    certdeploy:
-      default_ca: buypass
+```yaml
+  certdeploy:
+    default_ca: buypass
+```
   Use for a specific certificate only, if your default is another CA provider.
-  
+```yaml
+certdeploy:
+  default_ca: google
 
-    certdeploy:
-      default_ca: google
-      domains:
-        - cn: www.example.com
-          san: "example.com"
-          ca: buypass
+  domains:
+    - cn: www.example.com
+      san: "example.com"
+      ca: buypass
+```
 ## Staging (Testing ACME Server)
 When setting up certdeploy for the first time or debugging issues, you probably want to use the Staging server first. This is an alternative ACME server offered by Buypass for use with testing without worrying about hitting rate limits. The certificate chain offered on Staging is not publicly trusted and is a mock-up simply for testing your configuration and deployment systems.
 > [!WARNING]
@@ -52,4 +55,4 @@ Buypass AS is not cross-signed and relies on their own 2010 root.
 | Buypass Class 2 CA 5    |     Y    | RSA 4096 | SHA256withRSA | 2017-05-23 - 2027-05-23 | 3062918d9dd617925271bc7f8080b8a6a5d2185bbd880f7862fd4c043b194191 |
 | Buypass Class 2 Root CA |     N    | RSA 4096 | SHA256withRSA | 2010-10-26 - 2040-10-26 | 9a114025197c5bb95d94e63d55cd43790847b646b23cdf11ada4a00eff15fb48 |
 ## CAA Record
-If you are using CAA records to lock down what Certificate Authorities are authorized for your domain, you will need to add Buypass AS. They using the following CAA record: `buypass.com`
+If you are using CAA records to lock down what Certificate Authorities are authorized for your domain, you will need to add Buypass AS. They use the following CAA record: `buypass.com`
